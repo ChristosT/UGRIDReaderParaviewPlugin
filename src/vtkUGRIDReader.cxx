@@ -107,7 +107,7 @@ namespace sys {
     template <typename T>
     static void reverse_bytes(T* ptr)
     {
-        static_assert(sizeof(char) == 1);
+        static_assert(sizeof(char) == 1, "unexpected size of char");
 
         char* p = reinterpret_cast<char*>(ptr);
         for(short i = 0 ; i < sizeof(T)/2; i++)
