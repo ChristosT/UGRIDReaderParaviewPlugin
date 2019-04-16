@@ -1,0 +1,28 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="sources">
+   <SourceProxy name="UGRIDReader" 
+                class="vtkUGRIDReader"
+                label="UGRID Meshreader">
+     <Documentation
+       short_help="Read a (AFLR3) .ugrid mesh file."
+       long_help="Read a (AFLR3) .ugrid mesh file.">
+       The UGRID mesh reader reads .ugrid mesh files, and the output is an unstructured grid.
+     </Documentation>
+     <StringVectorProperty
+        name="Mesh File"
+        animateable="0"
+        command="SetMeshFile"
+        number_of_elements="1">
+        <FileListDomain name="files"/>
+        <Documentation>
+          This property specifies the mesh file name for the GMF reader.
+        </Documentation>
+     </StringVectorProperty>
+     <Hints>
+       <ReaderFactory extensions="ugrid"
+                      file_description="UGRID Mesh Format" />
+     </Hints>
+   </SourceProxy>
+  </ProxyGroup>
+</ServerManagerConfiguration>
+
