@@ -132,7 +132,7 @@ static bool read_mesh(const char* filename, vtkUnstructuredGrid* ugrid)
     std::FILE* file = std::fopen(filename,"r");
     if (file == NULL)
     {
-        //vtkErrorMacro(<<"Could not open UGRID file");
+        vtkErrorMacro(<<"Could not open UGRID file");
         return false;
     }
 
@@ -166,7 +166,6 @@ static bool read_mesh(const char* filename, vtkUnstructuredGrid* ugrid)
     // read header;
     int32_t nnodes,ntria,nquad,ntet,npyra,nprism,nhex;
     
-    std::cout << "REading points " << std::endl;
 
     if ( not ascii)
     {
