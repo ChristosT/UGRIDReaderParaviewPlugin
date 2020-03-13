@@ -1,6 +1,0 @@
-<ParaViewReaders>
-  <Reader name="UGRIDReader"
-          extensions="ugrid"
-          file_description="AFLR3 UGRID format">
-  </Reader>
-</ParaViewReaders>
