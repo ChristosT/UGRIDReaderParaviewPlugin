@@ -1,5 +1,7 @@
 set(classes
-    vtkUGRIDReader)
+    vtkUGRIDReader
+    vtkUGRIDReaderInternal
+    )
 
 vtk_module_add_module(UGRIDReader
   CLASSES ${classes}
