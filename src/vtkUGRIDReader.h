@@ -1,5 +1,5 @@
-#ifndef vtkSU2eader_h
-#define vtkSU2Reader_h
+#ifndef vtkUGRIDReader_h
+#define vtkUGRIDReader_h
 
 #include "vtkUnstructuredGridAlgorithm.h"
 #include "vtkObjectFactory.h"
@@ -12,7 +12,6 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
   vtkSetStringMacro(MeshFile);
-
   vtkGetStringMacro(MeshFile);
 
 protected:
