@@ -1,0 +1,8 @@
+NAME
+  UGRIDReaderParaview
+DESCRIPTION
+  Reader for visualization of AFLR UGRID mesh files 
+REQUIRES_MODULES
+  ParaView::VTKExtensionsCore
+  VTK::CommonCore
+  VTK::CommonExecutionModel

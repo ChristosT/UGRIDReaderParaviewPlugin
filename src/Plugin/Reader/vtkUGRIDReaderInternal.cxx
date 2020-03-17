@@ -1,143 +1,130 @@
-#include "vtkUGRIDReader.h"
-
-#include "vtkInformation.h"
-#include "vtkInformationVector.h"
-
-#include "vtkUnstructuredGrid.h"
-#include "vtkPointData.h"
 #include "vtkSmartPointer.h"
 
+#include "vtkPointData.h"
 
 #include "vtkCellType.h"
 #include "vtkCellData.h"
 #include "vtkIntArray.h"
+#include "vtkUnstructuredGrid.h"
 
 
-#include<vector>
-#include<string>
+#include <vector>
+#include <string>
 
-vtkStandardNewMacro(vtkUGRIDReader);
+#include "vtkUGRIDReaderInternal.h"
 
-// Construct object with merging set to true.
-vtkUGRIDReader::vtkUGRIDReader()
+namespace 
 {
-    this->MeshFile = NULL;
-
-    this->SetNumberOfInputPorts(0);
-}
-
-
-vtkUGRIDReader::~vtkUGRIDReader()
-{
-    delete [] this->MeshFile;
-}
-static void tri_from_ugrid(int32_t* in, vtkIdType* out)
-{
-    // just copy
-    out[0] = in[0]; 
-    out[1] = in[1]; 
-    out[2] = in[2]; 
-}
-static void quad_from_ugrid(int32_t* in, vtkIdType* out)
-{
-    // just copy
-    out[0] = in[0]; 
-    out[1] = in[1]; 
-    out[2] = in[2]; 
-    out[3] = in[3]; 
-}
-static void tet_from_ugrid(int32_t* in, vtkIdType* out)
-{
-    // just copy
-    out[0] = in[0]; 
-    out[1] = in[1]; 
-    out[2] = in[2]; 
-    out[3] = in[3]; 
-}
-
-static  void pyramid_from_ugrid(int32_t* in, vtkIdType* out)
-{
-    out[0] = in[3];
-    out[1] = in[4];
-    out[2] = in[1];
-    out[3] = in[0];
-    out[4] = in[2];
-}
-static  void prism_from_ugrid(int32_t* in, vtkIdType* out)
-{
-
-    out[0] = in[1]; 
-    out[1] = in[0]; 
-    out[2] = in[2]; 
-
-    out[3] = in[4]; 
-    out[4] = in[3]; 
-    out[5] = in[5]; 
-}
-static void hex_from_ugrid(int32_t* in, vtkIdType* out)
-{
-    // just copy
-    out[0] = in[0]; 
-    out[1] = in[1]; 
-    out[2] = in[2]; 
-    out[3] = in[3]; 
-                  
-    out[4] = in[4]; 
-    out[5] = in[5]; 
-    out[6] = in[6]; 
-    out[7] = in[7]; 
-}
-
-namespace sys {
-
-    // check host machine endianess
-    // source https://stackoverflow.com/a/26315033
-    const unsigned one = 1U;
-
-    static bool IamLittleEndian()
+    // some elements have different ordering of nodes.
+    void tri_from_ugrid(int32_t* in, vtkIdType* out)
     {
-        return reinterpret_cast<const char*>(&one) + sizeof(unsigned) - 1;
+        // just copy
+        out[0] = in[0]; 
+        out[1] = in[1]; 
+        out[2] = in[2]; 
+    }
+    void quad_from_ugrid(int32_t* in, vtkIdType* out)
+    {
+        // just copy
+        out[0] = in[0]; 
+        out[1] = in[1]; 
+        out[2] = in[2]; 
+        out[3] = in[3]; 
+    }
+    void tet_from_ugrid(int32_t* in, vtkIdType* out)
+    {
+        // just copy
+        out[0] = in[0]; 
+        out[1] = in[1]; 
+        out[2] = in[2]; 
+        out[3] = in[3]; 
     }
 
-    inline bool IamBigEndian()
+    void pyramid_from_ugrid(int32_t* in, vtkIdType* out)
     {
-        return !IamLittleEndian();
+        out[0] = in[3];
+        out[1] = in[4];
+        out[2] = in[1];
+        out[3] = in[0];
+        out[4] = in[2];
+    }
+    void prism_from_ugrid(int32_t* in, vtkIdType* out)
+    {
+
+        out[0] = in[1]; 
+        out[1] = in[0]; 
+        out[2] = in[2]; 
+
+        out[3] = in[4]; 
+        out[4] = in[3]; 
+        out[5] = in[5]; 
+    }
+    void hex_from_ugrid(int32_t* in, vtkIdType* out)
+    {
+        // just copy
+        out[0] = in[0]; 
+        out[1] = in[1]; 
+        out[2] = in[2]; 
+        out[3] = in[3]; 
+
+        out[4] = in[4]; 
+        out[5] = in[5]; 
+        out[6] = in[6]; 
+        out[7] = in[7]; 
     }
 
-    template <typename T>
-    static void reverse_bytes(T* ptr)
-    {
-        static_assert(sizeof(char) == 1, "unexpected size of char");
+    namespace sys {
 
-        char* p = reinterpret_cast<char*>(ptr);
-        for(short i = 0 ; i < sizeof(T)/2; i++)
-            std::swap(p[i],p[sizeof(T) -1 - i]);
+        // check host machine endianess
+        // source https://stackoverflow.com/a/26315033
+        const unsigned one = 1U;
+
+        bool IamLittleEndian()
+        {
+            return reinterpret_cast<const char*>(&one) + sizeof(unsigned) - 1;
+        }
+
+        inline bool IamBigEndian()
+        {
+            return !IamLittleEndian();
+        }
+
+        template <typename T>
+         void reverse_bytes(T* ptr)
+         {
+             static_assert(sizeof(char) == 1, "unexpected size of char");
+
+             char* p = reinterpret_cast<char*>(ptr);
+             for(short i = 0 ; i < sizeof(T)/2; i++)
+                 std::swap(p[i],p[sizeof(T) -1 - i]);
+         }
     }
+    std::string remove_last_suffix(const std::string& str)
+    {
+        std::size_t lastindex = str.find_last_of(".");
+        std::string basename  = str.substr(0, lastindex);
+        return basename;
+    }
+    std::string get_last_suffix(const std::string& str)
+    {
+        std::size_t lastindex = str.find_last_of(".");
+        if (lastindex == std::string::npos)
+            return "";
+        return  str.substr(lastindex);
+    }
+
 }
-static std::string remove_last_suffix(const std::string& str)
-{
-    std::size_t lastindex = str.find_last_of(".");
-    std::string basename  = str.substr(0, lastindex);
-    return basename;
-}
-static std::string get_last_suffix(const std::string& str)
-{
-    std::size_t lastindex = str.find_last_of(".");
-    if (lastindex == std::string::npos)
-        return "";
-    return  str.substr(lastindex);
-}
-static bool read_mesh(const char* filename, vtkUnstructuredGrid* ugrid)
+
+bool read_ugrid_mesh(const char* filename, vtkUnstructuredGrid* ugrid)
 {
     std::FILE* file = std::fopen(filename,"r");
     if (file == NULL)
     {
-        vtkErrorMacro(<<"Could not open UGRID file");
         return false;
     }
 
     std::string name(filename);
-    
+
     std::string name2 = remove_last_suffix(name);
     std::string suffix = get_last_suffix(name2);
 
@@ -149,7 +136,7 @@ static bool read_mesh(const char* filename, vtkUnstructuredGrid* ugrid)
         ascii = true;
     }
     else
-    // binary file
+        // binary file
     {
         // is the endianess the same ?
 
@@ -162,10 +149,9 @@ static bool read_mesh(const char* filename, vtkUnstructuredGrid* ugrid)
             different_endianess = true;
         }
     }
-   
+
     // read header;
     int32_t nnodes,ntria,nquad,ntet,npyra,nprism,nhex;
-    
 
     if ( not ascii)
     {
@@ -222,22 +208,22 @@ static bool read_mesh(const char* filename, vtkUnstructuredGrid* ugrid)
             std::fscanf( file, "%lf",&pt[1]);
             std::fscanf( file, "%lf",&pt[2]);
         }
-        
+
         pts->SetPoint(i,pt);
 
     }
     ugrid->SetPoints(pts);
-    
+
     int32_t totalNumElements = ntria + nquad + ntet + npyra + nprism + nhex;
     ugrid->Allocate(totalNumElements);
-   
+
     // Create a struct to save boundary information
     // Due to vtk restrictions? we have to save a value for every element
     vtkSmartPointer<vtkIntArray> markers = vtkSmartPointer<vtkIntArray>::New();
     markers->SetNumberOfComponents(1);
     markers->SetNumberOfTuples(totalNumElements);
     markers->SetName("elements_tag");
-    
+
     int32_t p[8];
     vtkIdType p2[8];
     for(int32_t i = 0 ; i < ntria ; i++)
@@ -415,36 +401,4 @@ static bool read_mesh(const char* filename, vtkUnstructuredGrid* ugrid)
 
     ugrid->GetCellData()->AddArray(markers);
     return true;
-}
-
-
-int vtkUGRIDReader::RequestData( vtkInformation *vtkNotUsed(request), 
-                                 vtkInformationVector **vtkNotUsed(inputVector), 
-                                 vtkInformationVector *outputVector)
-{
-    // get the info object
-    vtkInformation *outInfo = outputVector->GetInformationObject(0);
-
-    // get the ouptut
-    vtkUnstructuredGrid *output = vtkUnstructuredGrid::SafeDownCast( outInfo->Get(vtkDataObject::DATA_OBJECT())); 
-
-    if (!this->MeshFile)
-    {
-        vtkErrorMacro(<<"A File Name for the Mesh must be specified.");
-        return 0;
-    }
-
-    bool res = read_mesh(this->MeshFile,output);
-    output->Squeeze();
-    if (not res)
-        return 0;
-    return 1;
-}
-
-void vtkUGRIDReader::PrintSelf(ostream& os, vtkIndent indent)
-{
-    this->Superclass::PrintSelf(os,indent);
-
-    os  << indent << "MeshFile: "
-        << (this->MeshFile ? this->MeshFile : "(none)") << "\n";
 }

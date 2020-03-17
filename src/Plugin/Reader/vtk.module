@@ -1,0 +1,7 @@
+NAME
+    UGRIDReader
+DEPENDS
+    ParaView::VTKExtensionsCore
+    VTK::CommonCore
+    VTK::CommonExecutionModel
+    VTK::vtksys
